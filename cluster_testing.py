@@ -1,13 +1,16 @@
-
+import constants
+import requests
+import json 
+import re
 from pprint import pprint
 
 config = {
-    "host":"adb-3180815342576841.1.azuredatabricks.net",
-    "token":"dapi7b08c5d2d25408267033d98890fd5689-3",
+    "host":constants.HOST,
+    "token":constants.TOKEN,
 }
 
 def get_instance_types(config):
-    import requests
+    
     try:
         return requests.get(
             f"https://{config['host']}/api/2.0/clusters/list-node-types",
@@ -17,9 +20,17 @@ def get_instance_types(config):
     except:
         return None
 
-def create_cluster(config,cluster_def):
-    import requests
-    import json
+def get_clusters_current(config):
+    try:
+        return requests.get(
+            f"https://{config['host']}/api/2.0/clusters/list",
+            headers={"Authorization": f"Bearer {config['token']}"},
+            json={}
+            )
+    except:
+        return None
+
+def cluster_create(config,cluster_def):
     try:
         return requests.post(
             f"https://{config['host']}/api/2.0/clusters/create",
@@ -32,8 +43,6 @@ def create_cluster(config,cluster_def):
 
 
 def smallest_instances(instance_types):
-    import re
-
     recap = r"(Standard_)([A-z]+)(\d{1,3})(.*)$"
     x = re.compile(recap)
 
@@ -89,27 +98,36 @@ def main():
         print("No instance types were retrieved or there was an error")
         quit()
 
-    # pprint(instance_types_response.json())    
-    
     ## Build our list
     cluster_test_list = smallest_instances(instance_types=instance_types_response.json())
-
-    # pprint(cluster_test_list)
 
     ## Add cluster definition JSON
     cluster_test_list_defs = build_cluster_defs(cluster_test_list=cluster_test_list)
 
-    # pprint(cluster_test_list_defs)
+    ## Get list of current clusters
+    clusters_current_result = get_clusters_current(config=config)
+    clusters_current = clusters_current_result.json()
+    cluster_current_names = []
+    if 'clusters' in clusters_current.keys():
+        for c in clusters_current['clusters']:
+            cluster_current_names.append(c['cluster_name'])
 
-    ## Build 
-    # create_small_clusters()# cluster_test_list
-    import json
+    
+    ## Build our clusters
+    limit = 2
+    use_limit = True
+    check_exists = True
+    for x, c  in enumerate(cluster_test_list_defs.keys()):
+        if use_limit and x > limit:
+            break
 
-    for c in cluster_test_list_defs.keys():
-        print(f"Creating cluser '{c}'")
-        result = create_cluster(config=config,cluster_def=cluster_test_list_defs[c]['cluster_def_json'])
+        if check_exists and c in cluster_current_names :
+           print(f"Skipping cluster '{c}' already exists")
+           continue
+
+        print(f"Creating cluster '{c}'")
+        result = cluster_create(config=config,cluster_def=cluster_test_list_defs[c]['cluster_def_json'])
         print(f"Result {result.json()}")
-        # print(json.dumps(cluster_test_list_defs[c]['cluster_def_json']))
     
 if __name__ == "__main__":
     main()
