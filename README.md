@@ -23,7 +23,9 @@ TOKEN = "dapiabcdefghijklmnop1234565-3"
 
 ## Use Databricks Python SDK
 https://docs.databricks.com/en/dev-tools/sdk-python.html
+
 *Can be run in Databricks notebook*
 
 `cluster_testing_status.py` - check status of test clusters
+
 `cluster_testing_cleanup.py` - delete test clusters

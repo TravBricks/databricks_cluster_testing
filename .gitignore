@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 
 constants.py
+example.json
